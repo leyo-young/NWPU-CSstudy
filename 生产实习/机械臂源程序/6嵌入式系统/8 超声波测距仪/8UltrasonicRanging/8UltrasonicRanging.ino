@@ -1,0 +1,52 @@
+
+#include <Arduino.h>
+#include <U8g2lib.h>
+
+#ifdef U8X8_HAVE_HW_SPI
+#include <SPI.h>
+#endif
+#ifdef U8X8_HAVE_HW_I2C
+#include <Wire.h>
+#endif
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE); //选择屏幕型号1.3寸SH1106 OLED屏幕
+
+#define ECHOPIN 53// 定义接收引脚（53号）
+#define TRIGPIN A0// 定义触发引脚（54号A0）
+int distance;
+const unsigned char cz6[] U8X8_PROGMEM = {
+  /*--  调入了一幅图像：C:\Users\ADMIN\Desktop\测距仪.bmp  --*/
+  /*--  宽度x高度=42x16  --*/
+  /*--  宽度不是8的倍数，现调整为：宽度x高度=48x16  --*/
+  0x00, 0x10, 0x00, 0x80, 0x08, 0x00, 0xF2, 0x91, 0xEF, 0x87, 0x10, 0x00, 0x14, 0x91, 0x28, 0x80,
+  0x90, 0x00, 0x50, 0x95, 0x28, 0x40, 0x82, 0x00, 0x51, 0x95, 0x28, 0x40, 0x82, 0x00, 0x52, 0x95,
+  0xEF, 0x63, 0x44, 0x00, 0x50, 0x15, 0x22, 0x52, 0x44, 0x00, 0x54, 0x95, 0x22, 0x42, 0x28, 0x00,
+  0x54, 0x95, 0x2E, 0x42, 0x28, 0x00, 0x42, 0x94, 0xE2, 0x43, 0x10, 0x00, 0xA2, 0x90, 0x22, 0x40,
+  0x28, 0x00, 0x21, 0x91, 0x2E, 0x40, 0x44, 0x00, 0x11, 0xD1, 0x21, 0x40, 0x82, 0x00, 0x08, 0x1C,
+  0xE0, 0x47, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+void setup() {
+  u8g2.begin();//构造u8g2模式：初始化显示器，重置清屏，唤醒屏幕
+  pinMode(ECHOPIN, INPUT);//定义接收引脚为I/O输入
+  pinMode(TRIGPIN, OUTPUT);//定义触发引脚为I/O输出
+}
+
+void loop() {
+  digitalWrite(TRIGPIN, LOW); // 置Trig为低电平，持续 2uS
+  delayMicroseconds(2);
+  digitalWrite(TRIGPIN, HIGH); // 置Trig为高电平，持续 至少10uS，触发测距
+  delayMicroseconds(20);
+  digitalWrite(TRIGPIN, LOW); // 又置Trig为低电平
+  
+  // 从Echo引脚读取超声波从发射至返回的时间，并计算距离
+  distance = pulseIn(ECHOPIN, HIGH) / 58; 
+  
+  u8g2.clearBuffer();          // 清显示屏缓冲区
+  u8g2.drawXBMP(0, 0, 48, 16, cz6);// 显示超声波测距仪图标
+  u8g2.setFont(u8g2_font_7Segments_26x42_mn); // 选择合适的字体
+  u8g2.setCursor(10, 64);//设置光标位置
+  u8g2.print(distance);//显示距离
+  u8g2.setFont(u8g2_font_6x10_mf  ); // 选择合适的字体
+  u8g2.setCursor(110, 64);//设置光标位置
+  u8g2.print("cm");//显示单位cm
+  u8g2.sendBuffer();          // 将缓冲区的内容发送给显示器，发刷新消息
+}
